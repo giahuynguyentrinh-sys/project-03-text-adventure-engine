@@ -111,7 +111,9 @@ rooms = {
 }
 current_room = "Homeroom"
 current_health = 100
-
+def input_int(number):
+    while True
+        
 
 def showroom(room_name):
     room = rooms[room_name]
@@ -162,15 +164,15 @@ def moving_character(room_name):
 def fight(room_name):
     room = rooms[room_name]
     print("choose 0 or 1")
-    personchoice = int(input("let the fate decide your destiny!: "))
-    if personchoice == random.randint(0,1):
-        print("you feel relief as if something has passed you")
-        return
-    else:
-        for monster in room["monster"]:
-            hpleft = attack(monster, player_damage)
-        
-
+    flee = False
+    while flee == False:
+        personchoice = int(input("let the fate decide your destiny!: "))
+        if personchoice == random.randint(0,1):
+            print("you feel relief as if something has passed you")
+            flee = True
+        battle = -1
+        while battle != 0:
+            
         
         
         
