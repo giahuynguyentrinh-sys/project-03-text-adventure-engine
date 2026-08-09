@@ -8,7 +8,7 @@ rooms = {
         "exits": {"straight": "Execution-room", "left": "Mysterious-shop", "right": "Quiet-room"},
         "items": [
             {"name": "rusty-sword", "damage": 15, "type": "sword"},
-            {"name": "note", "type": "lore"}
+            {"name": "note", "type": "lore", "damage": 0}
         ],
         "monster": None,
         "npc": None
@@ -44,7 +44,7 @@ rooms = {
     },
     "Quiet-room": {
         "description": "The air is calm, and no monsters are in sight. For a brief moment, you let your guard down.",
-        "exits": {"back": "Bersek-room", "straight": "Deadend"},
+        "exits": {"back": "Bersek-room", "straight": "Deadend", "left": "Homeroom"},
         "items": [
             {"name": "magical-book", "type": "sword", "damage": 100},
             {"name": "health-potion", "damage": 30, "type": "potion"}
@@ -72,7 +72,7 @@ rooms = {
         "description": "A chamber overflowing with unimaginable wealth. The silence is unsettling, and the treasure seems almost too easy to take.",
         "exits": {"left": "Boss-room", "straight": "Mysterious-shop"},
         "items": [
-            {"name": "true-key", "type": "key"},
+            {"name": "true-key", "type": "key", "damage": 0},
         ],
         "monster": [
             {"name": "supreme-thief", "damage": 0, "type": "monster","hp":1}
@@ -83,7 +83,7 @@ rooms = {
         "description": "The floor is littered with pressure plates and rusty spikes. One wrong step and it's over.",
         "exits": {"back": "Bersek-room", "straight": "Deadend"},
         "items": [
-            {"name": "boss-key", "type": "key"},
+            {"name": "boss-key", "type": "key", "damage": 0},
         ],
         "monster": None,
         "npc": None
@@ -92,7 +92,7 @@ rooms = {
         "description": "A massive chamber cloaked in shadows. At its center stands the final guardian, waiting.",
         "exits": {"back": "Vault"},
         "items": [
-            {"name": "boss-loot", "type": "treasure"}
+            {"name": "boss-loot", "type": "treasure", "damage": 0}
         ],
         "monster": [
             {"name": "the trace of supreme-thief", "damage": 100, "type": "specialmonster", "hp": 500}
@@ -102,7 +102,7 @@ rooms = {
     "Deadend": {
         "description": "A black face gradually appears out of nowhere. Fortunately, it is just a black wall with meticulous details.",
         "monster": [
-            {"name": "Faceless", "damage": 10, "type": "monster", "hp":10 }
+            {"name": "Faceless", "damage": 10, "type": "monster", "hp":50 }
         ],
         "npc": None,
         "exits": {"back": "Homeroom"},
@@ -124,13 +124,13 @@ character_original = copy.deepcopy(character)
 
 def reset_game():
     global rooms, character
-    rooms = copy.deepcopy(rooms)
-    character = copy.deepcopy(character)
+    rooms = copy.deepcopy(rooms_original)
+    character = copy.deepcopy(character_original)
     print("reset the world")
 
 def showweapon(weapons):
     for weapon in weapons:
-        print(f"you have {weapon["name"],{weapon["damage"]}}")
+        print(f"you have {weapon["name"]},{weapon["damage"]}")
     
 
 
@@ -139,8 +139,8 @@ def input_int(number):
         try:
             return int(input(number))
         except ValueError:
-            print("Hey stop fucking my game")        
-
+            print("Hey stop fucking my game") 
+            
 def showroom(room_name):
     room = rooms[room_name]
     print(room["description"])
@@ -162,7 +162,10 @@ def moving_character(room_name):
 def notenoughgold(itemgold):
     if character["gold"] < itemgold:
         print("you don't have enough gold")
-        return  
+        return True
+    else:
+        return False 
+
 def shop():
     if character["current_position"] == "Mysterious-shop":
         while True:
@@ -175,9 +178,9 @@ def shop():
             if notenoughgold(rooms["Mysterious-shop"]["items"][playerchoice -1]["gold"]):
                 continue
             else:   
-                character["gold"] -= rooms["Mysterious-shop"]["items"][playerchoice -1]["gold"]
-                print(f"you buy {rooms["Mysterious-shop"]["items"][playerchoice -1]}")
-                character["items"].append(rooms["Mysterious-shop"]["items"][playerchoice -1])
+                    character["gold"] -= rooms["Mysterious-shop"]["items"][playerchoice -1]["gold"]
+                    print(f"you buy {rooms["Mysterious-shop"]["items"][playerchoice -1]}")
+                    character["items"].append(rooms["Mysterious-shop"]["items"][playerchoice -1])
             
 def trap_room():
     if character["current_position"] == "Trap-room":
@@ -208,20 +211,21 @@ def trap_room():
                     print("you exit")
                     return
                 return
+def deadend():
+    fight("Deadend")
+    print("you met final deadend you decide to go thourgh it")
+    print("you at homeroom")
+    character["current_position"] = "Homeroom"
 
-def boss_room(Boss_room):
+def boss_room():
     if character["current_position"] == "Boss_room":
         for item in character["items"]:
-            if any(item["name"]) == "true-key":
+            if item["name"] == "true-key":
                 print("you enter boss-room")
                 print("you met supreme-theif")
-                showroom(Boss_room)
-                fight(Boss_room)
-                if check_player_die(character):
-                    break
-                else:
-                    takeitems()
-                    break
+                showroom("Boss_room")
+                fight("Boss_room")
+                return
         else:
             print("you don't have the key")
             return
@@ -245,7 +249,7 @@ def defensemechanic(character, damage):
         return damage - character["defense"]
         
 
-def fireoftruth():
+def fireoftruth(monster):
     lives = 3
     bossheart = 4
     print("If you must sacrifice one... your life or your name... which survives eternity?")
@@ -305,7 +309,10 @@ def fireoftruth():
             return
     else:
         print("bravo you kill a strong entity")
-
+        for i,n in enumerate(monster):
+            if n["name"] == "Fire of Truth":
+                monster.pop[i]
+                break
 def supthief():
         thief = rooms["Boss_room"]["monster"][0]
         while thief["hp"] > 0 and character["hp"] >0:
@@ -339,8 +346,8 @@ def handle_special_monster(monster):
         elif monster["name"] == "the trace of supreme-thief":
             supthief()
             
-def attack(i):
-        monster = rooms[character["current_position"]]["monster"][i]
+def attack(target):
+        monster = target
         print("let the fate decide your destiny.")
         fate = random.randint(1, 5)
         choose = input_int("press 1 to 5 to attack: ")
@@ -355,24 +362,15 @@ def attack(i):
             print("you missed")
         
         if monster["hp"] <= 0:
+            monsterloot(monster)
             return
         
         print(f"{monster['name']} phase")
         
         if monster["damage"] == 0:
             print("supreme-thieft look at you and smirk, slowly vanished through the air")
-            del rooms["vault"]["monster"][0]
+            del rooms["Vault"]["monster"][0]
             return
-        
-        monsterfate = random.randint(1, 5)
-        monsterchoose = random.randint(1, 5)
-        
-        if monsterchoose == monsterfate:
-            dmg = defensemechanic(character, monster["damage"]*1.5)
-        else:
-            dmg = defensemechanic(character, monster["damage"])
-        character["hp"] -= dmg
-        print(f"{monster['name']} deal {dmg}")
         
         if check_player_die(character):
             return
@@ -393,7 +391,7 @@ def showinventory(target):
         return
     else:
         for i,item in enumerate(target["items"]):
-            print(f"{i}, {item}")  
+            print(f"{i}, {item["name"]}:{item["damage"]}dmg")  
 
 
 def chooseitem(message, target):
@@ -420,7 +418,7 @@ def takeitems():
     
 def choosetarget(monster, character):
     print("1.monster\n2.player")
-    playerchoice = input_int("please choose a number")
+    playerchoice = input_int("please choose a number: ")
     if playerchoice == 1:
         return monster
     elif playerchoice == 2:
@@ -452,7 +450,10 @@ def equip_item(item, slot_name, stat_name):
     
     
 def useitem(monster):
-    item = chooseitem("choose item", character)
+    item = chooseitem("choose item: ", character)
+    if item is None:
+        print("no item use")
+        return
     if monster is None:
         target = character
     else:
@@ -495,11 +496,12 @@ def fight(room_name):
     if room["monster"] is None:
         print("no monster here you are safe now")
         return
-    else:
-        print("a figure rising from the dark")
+    if len(room["monster"]) == 0:
+        print("all monster dead")
+        return
     n = False
-    while n == False:
-        choice = input_int("choose 0 to 3: ")
+    while n == False: 
+        choice = input_int("choose 0 to 3 (if lucky you could flee the attack): ")
         fate = random.randint(0,3)
         if fate == choice and rooms[character["current_position"]]["monster"][0]["name"] != "the trace of supreme-thief":
             print("It doesn't seem to notice me... I'm safe for now.")
@@ -508,41 +510,42 @@ def fight(room_name):
             n = True   
         print("It noticed me!")
         for i, monster in enumerate(room["monster"]):
-                        print(f"{i}, {monster['name']}")           
+            print(f"{i}, {monster['name']}")
         yourchoice = input_int("you decide to encounter: ")
-        print(f"you deal with {monster[yourchoice]["name"]}")
+        for i, monster in enumerate(room["monster"]):
+            if i == yourchoice:
+                print(f"you deal with {rooms[character['current_position']]["monster"][i]["name"]}")
+                break
         x = False
+        target = room["monster"][yourchoice]
         while x == False:
-            target = room["monster"][yourchoice]
             action = input_int("1. attack\n2. use item\nchoose action: ")   # <- THÊM DÒNG NÀY
             
             if action == 1:
                 if check_special_monster(target):
                     handle_special_monster(target)
                 else:
-                    attack(yourchoice)
+                    attack(target)
+                    monstercounterattack(target)
             elif action == 2:
-                useitem(target)          # truyền quái đang chọn vào, để useitem() biết target là ai
-            
+                if check_special_monster(target):
+                    continue
+                else:
+                    useitem(target)# truyền quái đang chọn vào, để useitem() biết target là ai
+                    monstercounterattack(target)
             if check_player_die(character):
                 print("you dead")
                 return
             
             for m in room["monster"][:]:
-                if m["name"] == "Faceless" and m["hp"] <= 0:
-                    print("you slain Faceless but something off happen, it not dead")
-                    return
                 if check_monster_die(m):
                     print(f"you slain {m['name']}")
                     monsterloot(m)
                     room["monster"].remove(m)
                     x = True
                     break
-            if len(room["monster"]) > 0 or check_monster_die(target):
-                x = True
             else:
-                return
-        x = True
+                continue
            
 while True:
     if playerwon():
@@ -553,6 +556,8 @@ while True:
         shop()
     elif character["current_position"] == "Trap-room":
         trap_room()
+    elif character["current_position"] == "Deadend":
+        deadend()
     elif character["current_position"] == "Boss_room":
         boss_room(character["current_position"])
     else:
