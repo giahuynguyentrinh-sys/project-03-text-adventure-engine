@@ -70,7 +70,7 @@ rooms = {
     },
     "Vault": {
         "description": "A chamber overflowing with unimaginable wealth. The silence is unsettling, and the treasure seems almost too easy to take.",
-        "exits": {"left": "Boss-room", "straight": "Mysterious-shop"},
+        "exits": {"left": "Boss_room", "straight": "Mysterious-shop"},
         "items": [
             {"name": "true-key", "type": "key", "damage": 0},
         ],
@@ -106,7 +106,8 @@ rooms = {
         ],
         "npc": None,
         "exits": {"back": "Homeroom"},
-        "items": None
+        "items": None,
+        "visited": False
     },
 }
 character = {
@@ -117,7 +118,8 @@ character = {
     "defweapon": [],
     "damage": 10,
     "defense": 10,
-    "current_position" : "Homeroom"
+    "current_position" : "Homeroom",
+    "visited_room": {"Homeroom"}
 }
 rooms_original = copy.deepcopy(rooms)
 character_original = copy.deepcopy(character)
@@ -132,7 +134,33 @@ def showweapon(weapons):
     for weapon in weapons:
         print(f"you have {weapon["name"]},{weapon["damage"]}")
     
-
+def item_menu():
+    while True:
+        print("""
+                [1] take item
+                [2] use item
+                [3] drop item
+                [4] back to main menu
+            """)
+        choice = input_int("choose an action: ")
+        if choice == 1:
+            takeitems()
+        elif choice == 2:
+            useitem(None)
+        elif choice == 3:
+            dropitems()
+        elif choice == 4:
+            return
+        else:
+            print("invalid choice")
+def showmap():
+    print("____Map____")
+    for names in rooms:
+        if names in character["visited_room"]:
+            print(f"[X] {names}")
+        else:
+            print(f"[?] {names}")
+        
 
 def input_int(number):
     while True:
@@ -148,12 +176,16 @@ def showroom(room_name):
 #The lesson here: enumerate() always hands you (number, item) in that fixed order
 def moving_character(room_name):      
     room = rooms[room_name]
-    for i, direction in enumerate(room["exits"].keys()):
-        print(i, direction)
+    for i, (direction, rom) in enumerate(room["exits"].items()):
+        if rom in character["visited_room"]:
+                print(f"{i}, {direction} --->{rom}")
+        else:
+                print(f"{i}, {direction} ---> ???")
     n = input_int("choose where to head to: ")
     for i, (direction,phong)  in enumerate((room["exits"]).items()):
         if n == i:
             character["current_position"] = phong
+            character["visited_room"].add(character["current_position"])
             return
     else:
         print("path don't exits")
@@ -213,6 +245,8 @@ def trap_room():
                 return
 def deadend():
     fight("Deadend")
+    if check_player_die(character):
+        reset_game()
     print("you met final deadend you decide to go thourgh it")
     print("you at homeroom")
     character["current_position"] = "Homeroom"
@@ -309,9 +343,9 @@ def fireoftruth(monster):
             return
     else:
         print("bravo you kill a strong entity")
-        for i,n in enumerate(monster):
+        for i,n in enumerate(rooms["Bersek-room"]):
             if n["name"] == "Fire of Truth":
-                monster.pop[i]
+                rooms["Bersek-room"].pop(i)
                 break
 def supthief():
         thief = rooms["Boss_room"]["monster"][0]
@@ -342,7 +376,7 @@ def check_special_monster(monster):
 
 def handle_special_monster(monster):
         if monster["name"] == "Fire of Truth":
-            fireoftruth()
+            fireoftruth(monster)
         elif monster["name"] == "the trace of supreme-thief":
             supthief()
             
@@ -413,9 +447,18 @@ def takeitems():
     else: 
         item = chooseitem("choose an item to take: ", rooms[character["current_position"]])
         character["items"].append(item)
-        rooms[character["current_position"]]["items"].remove(item) 
-    
-    
+        rooms[character["current_position"]]["items"].remove(item)
+
+def dropitems():
+    if not character["items"]:
+        print("no items to drop")
+        return None
+    else: 
+        item = chooseitem("choose an item to drop: ", character)
+        print(f"you have dropped {item}")
+        rooms[character["current_position"]]["items"].append(item)
+        character["items"].remove(item)
+
 def choosetarget(monster, character):
     print("1.monster\n2.player")
     playerchoice = input_int("please choose a number: ")
@@ -462,7 +505,7 @@ def useitem(monster):
             character["damage"] += item["damage"]
             character["items"].remove(item)
     elif item["name"] == "magical-book":
-            monster["hp"] -= item["damage"]
+            target  ["hp"] -= item["damage"]
             character["items"].remove(item) 
     elif item["type"] == "potion" or item["type"] == "food":
         target["hp"] += item["damage"]
@@ -526,12 +569,26 @@ def fight(room_name):
                     handle_special_monster(target)
                 else:
                     attack(target)
-                    monstercounterattack(target)
+                    if check_monster_die(target):
+                        print(f"you slain {target['name']}")
+                        monsterloot(target)
+                        room["monster"].remove(target)
+                        x = True
+                        break
+                    else:
+                        monstercounterattack(target)
+                    
             elif action == 2:
                 if check_special_monster(target):
                     continue
                 else:
                     useitem(target)# truyền quái đang chọn vào, để useitem() biết target là ai
+                    if check_monster_die(target):
+                        print(f"you slain {target['name']}")
+                        monsterloot(target)
+                        room["monster"].remove(target)
+                        x = True
+                        break
                     monstercounterattack(target)
             if check_player_die(character):
                 print("you dead")
@@ -559,7 +616,7 @@ while True:
     elif character["current_position"] == "Deadend":
         deadend()
     elif character["current_position"] == "Boss_room":
-        boss_room(character["current_position"])
+        boss_room()
     else:
         fight(character["current_position"])
     if check_player_die(character):
@@ -567,25 +624,22 @@ while True:
         continue
     while True:
         print("""
-                [1] take item
-                [2] use item  
-                [3] show inventory
+                [1] item menu 
+                [2] show inventory
+                [3] show visited places
                 [4] move
                 [5] exit
                 
             """)
         choice = input_int("choose an action: ")
         if choice == 1:
-            takeitems()
+            item_menu()
         elif choice == 2:
-            useitem(None)
+            showinventory()
         elif choice == 3:
-            showinventory(character)
-            showweapon(character["weapon"])
-            showweapon(character["defweapon"])
+            showmap()
         elif choice == 4:
             moving_character(character["current_position"])
-            break
         elif choice == 5:
             exit()
         else:
