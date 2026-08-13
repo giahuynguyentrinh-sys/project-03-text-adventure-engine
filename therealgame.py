@@ -107,7 +107,6 @@ rooms = {
         "npc": None,
         "exits": {"back": "Homeroom"},
         "items": None,
-        "visited": False
     },
 }
 character = {
@@ -124,19 +123,168 @@ character = {
 rooms_original = copy.deepcopy(rooms)
 character_original = copy.deepcopy(character)
 
-class Monster:
-    def __init__(self, name, hp, dmg)
+class items:
+    def __init__(self, name, damage, type, price=0):
+        self.name = name 
+        self.damage = damage
+        self.type = type
+        self.price = price    
+class weapon(items):
+    def replaceweapon(self, character, slot_weapon):
+        old_item = slot_weapon[0]
+        character.items.append(old_item)
+        slot_weapon.remove(old_item)
+        old_item.updatestat(character, add = False)
+        slot_weapon.append(self)
+        self.updatestat(character, add = True)
+        
+    def equipweapon(self, character, slot_weapon):
+        if len(slot_weapon) == 1:
+            self.replaceitem(character, slot_weapon)
+        elif self.type == "sword":
+            character.weapon.append(self)
+            self.updatestat(character, add = True)
+        elif self.type == "armor":
+            character.defweapon.append(self)
+            self.updatestat(character,add = True)
+    def updatestat(self, character,add = True):
+        if self.type == "sword":
+            if add:
+                character.damage += self.damage
+            else:
+                character.damage -= self.damage
+        elif self.type == "armor":
+            if add:
+                character.defense += self.damage
+            else:
+                character.defense -= self.damage
+class potion(items):
+    def potioneffect(self, target):
+        if self.type == "healing_potion":
+            target.hp += self.damage
+        elif self.type == "stat_potion":
+            target.damage += self.damage
+        elif self.type == "damage_potion":
+            target.hp -= self.damage        
 
+class key(items):
+    def __init__(self, name, unlocks, price=0):
+        super().__init__(name = name, damage= 0, type="key",price = price)
+        self.unlocks = unlocks
+    def unlockroom(self, unlocks):
+        return self.unlocks == unlocks
+   
+#weapon
+rustysword = weapon(name="rusty-sword", damage=15, type="sword")
+shop_sword = weapon(name="sword", damage=20, type="sword", price=30)
+axe = weapon(name="axe", damage=30, type="sword")
+magical_book = weapon(name="magical-book", damage=50, type="sword")
+fire_sword = weapon(name="fire-sword", damage=40, type="sword")
+#potion
+exotic_health_potion = potion(name="exotic_potion", damage=70, type="healing_potion", price=80)
+strength_potion = potion(name="strength_potion", damage=20, type="stat_potion", price=20)
+poison = potion(name="poison", damage=30, type="damage_potion", price=40)
+fire_poison = potion(name="fire_poison", damage=40, type="damage_potion", price=0)
+health_potion = potion(name="health_potion", damage=25, type="healing_potion", price=0)
+#food
+apple = potion(name="apple", damage=10, type="healing_potion", price=10)
+human_meat = potion(name="human_meat", damage=30, type="healing_potion", price=0)
+#key
+true_key = key(name= "true_key", unlocks ="Vault", type = "key", price = 0)
+boss_key = key(name="boss_key", unlocks ="Boss_room", type="key", price=0)
+boss_loot = key(name="boss_loot", unlock ="True_end", type="key", price=0)
 
+    
+
+class rooms:
+    def __init__(self, name, information,exits =None, items = None, monsters = None):
+        self.name = name
+        self.information = information
+        self.exits = exits if exits is not None else []
+        self.items = items if items is not None else []
+        self.monsters = monsters if monsters is not None else []
+    def addditem(self, item):
+        self.items.append(item)
+    def removeitem(self, item):
+        self.items.remove(item)
+    def addmonster(self, monster):
+        self.monsters.append(monster)
+    def removemonster(self,monster):
+        self.monsters.remove(monster)
+
+        
+#rooms self, name, information,exits =None, items = None, monsters = None
+Homeroom = rooms(
+    name="Homeroom",
+    information="You feel the cold slicing through your body, you vomit and start to have hallucinations, wonder what it is",
+    exits={"straight": "Execution-room", "left": "Mysterious-shop", "right": "Quiet-room"}
+)
+
+Mysterious_shop = rooms(
+    name="Mysterious-shop",
+    information="Shelves overflow with odd potions, dusty relics, and enchanted curiosities from forgotten lands.",
+    exits={"right": "Homeroom"}
+)
+
+Execution_room = rooms(
+    name="Execution-room",
+    information="An abandoned execution room. The old guillotine stands motionless, as if waiting for its next victim.",
+    exits={"left": "Deadend", "straight": "Deadend", "back": "Homeroom"}
+)
+
+Quiet_room = rooms(
+    name="Quiet-room",
+    information="The air is calm, and no monsters are in sight. For a brief moment, you let your guard down.",
+    exits={"back": "Bersek-room", "straight": "Deadend", "left": "Homeroom"}
+)
+
+Bersek_room = rooms(
+    name="Bersek-room",
+    information="The room is soaked in dried blood. Mangled corpses lie scattered across the floor, their faces frozen in terror. Something is still breathing nearby.",
+    exits={"right": "Trap-room", "left": "Vault"}
+)
+
+Vault = rooms(
+    name="Vault",
+    information="A chamber overflowing with unimaginable wealth. The silence is unsettling, and the treasure seems almost too easy to take.",
+    exits={"left": "Boss_room", "straight": "Mysterious-shop"}
+)
+
+Trap_room = rooms(
+    name="Trap-room",
+    information="The floor is littered with pressure plates and rusty spikes. One wrong step and it's over.",
+    exits={"back": "Bersek-room", "straight": "Deadend"}
+)
+
+Boss_room = rooms(
+    name="Boss_room",
+    information="A massive chamber cloaked in shadows. At its center stands the final guardian, waiting.",
+    exits={"back": "Vault"}
+)
+
+Deadend = rooms(
+    name="Deadend",
+    information="A black face gradually appears out of nowhere. Fortunately, it is just a black wall with meticulous details.",
+    exits={"back": "Homeroom"}
+)
+
+Trueend = rooms(
+    name= "Truend",
+    information="you win the game",
+    exits=None
+)
+    
 class CHARACTER:
-    def __init__(self,name, hp, dmg, defense =0, gold = 0, 
-                 weapon = None, defweapon = None, items = None,
+    def __init__(self,name, hp, damage, defense =0, gold = 0, 
+                 weapon = None,defweapon = None, items = None,
                  current_position = "Homeroom",
-                 visited_room = None
+                 visited_room = None, type = "character"
+                 
                  ):
+        self.type = type
         self.name = name
         self.hp = hp
-        self.dmg = dmg 
+        self.damage = damage 
         self.defense = defense
         self.gold = gold
         self.items = items if items is not None else []
@@ -144,17 +292,122 @@ class CHARACTER:
         self.defweapon = defweapon if defweapon is not None else []
         self.current_position = current_position
         self.visited_room = visited_room if visited_room is not None else {"Homeroom"}
-    def takedamage(self, dmg):
-        actual_damage = max(0, dmg - self.defense)
+    @staticmethod
+    def spawnmonster(name,hp,damage):
+        return CHARACTER(name=name,hp=hp, damage = damage, type = "monster",gold = random.randint(1,10))
+    def takedamage(self, damage):
+        actual_damage = max(0, damage - self.defense)
         self.hp -= actual_damage
         return actual_damage
     def isdead(self):
         return self.hp <=0
+    #item
+    def showinventory(target):
+        if not target.items:
+            print("no item found")
+            return
+        else:
+            for i,item in enumerate(target.items):
+                print(f"{i}, {item.name}")
+    def chooseitem(target):
+        if not target.items:
+            return None
+        else:
+            while True:
+                try:
+                    target.showinventory()
+                    choice = input_int("choose item: ")
+                    return target.items[choice]
+                except IndexError:
+                    print("invalid number")
+    def showitemstat(target):
+        items = target.chooseitem()
+        print((items.name), (items.type), (items.damage))
+    def takeitems(target):
+        if not rooms[target.current_position].items:
+            print("no items found")
+            return None
+        else: 
+            item = target.chooseitem()
+            target.items.append(item)
+            rooms[target.current_position].items.remove(item)
+    def dropitems(target):
+        if not target.items:
+            print("no items to drop")
+            return None
+        else: 
+            item = target("choose an item to drop: ", character)
+            print(f"you have dropped {item}")
+            rooms[character.current_position]["items"].append(item)
+            character.items.remove(item)
+
+def choosetarget(monster, character):
+    print("1.monster\n2.player")
+    playerchoice = input_int("please choose a number: ")
+    if playerchoice == 1:
+        return monster
+    elif playerchoice == 2:
+        return character           
+
+def equip_item(item, slot_name, stat_name):
+    """
+    slot_name: "weapon" hoặc "defweapon"
+    stat_name: "damage" hoặc "defense"
+    """
+    if len(character.slot_name) == 1:
+        playerchoice = input_int("1.change item\n2.cancel")
+        if playerchoice == 1:
+            old_item = character[slot_name][0]
+            character[slot_name].remove(old_item)
+            character.items.append(old_item)
+            character[stat_name] -= old_item[stat_name]
+            
+            character[slot_name].append(item)
+            character[stat_name] += item[stat_name]
+            character.items.remove(item)
+        else:
+            return
+    else:
+        character[slot_name].append(item)
+        character[stat_name] += item[stat_name]
+        character.items.remove(item)
+        
     
+    
+def useitem(monster):
+    item = chooseitem("choose item: ", character)
+    if item is None:
+        print("no item use")
+        return
+    if monster is None:
+        target = character
+    else:
+        target = choosetarget(monster, character)
+    if item["name"] == "strength-potion":
+            character["damage"] += item["damage"]
+            character["items"].remove(item)
+    elif item["name"] == "magical-book":
+            target  ["hp"] -= item["damage"]
+            character["items"].remove(item) 
+    elif item["type"] == "potion" or item["type"] == "food":
+        target["hp"] += item["damage"]
+        character["items"].remove(item)
+    
+    elif item["type"] == "sword":
+        equip_item(item, "weapon", "damage")
+    
+    elif item["type"] == "armor":
+        equip_item(item, "defweapon", "defense")
+            
+    elif item["type"] == "lore":
+        print("i am so lazy if you have treasure and defeat\nboss you will win btw there is a key in vault room so good luck")
+
+    
+#you
 character = CHARACTER(
 name = "hero",
 hp = character["hp"],
-dmg = character["damage"],
+damage = character["damage"],
 defense = character["defense"],
 items = character["items"],
 gold = character["gold"],
@@ -163,6 +416,22 @@ defweapon = character["defweapon"],
 current_position= character["current_position"],
 visited_room = character["visited_room"]
 )
+
+# monster thường (name, hp,damage)
+executioner = CHARACTER.spawnmonster("executioner", 50, 30)
+weak_zombie = CHARACTER.spawnmonster("weak_zombie", 30, 15)
+strong_zombie = CHARACTER.spawnmonster("strong_zombie", 70, 15)
+orc = CHARACTER.spawnmonster("orc", 100, 25)
+fallen_knight = CHARACTER.spawnmonster("The fallen knight", 200, 10)
+supreme_thief = CHARACTER.spawnmonster("supreme-thief", 1, 0)
+faceless = CHARACTER.spawnmonster("Faceless", 50, 10)
+
+# specialmonster
+fire_of_truth = CHARACTER.spawnspecialmonster("Fire of Truth", 1000, 1000)
+supreme_thief_trace = CHARACTER.spawnspecialmonster("the trace of supreme-thief", 500, 100)
+
+
+
 
 
 def reset_game():
@@ -205,20 +474,18 @@ def input_int(number):
         except ValueError:
             print("Hey stop fucking my game") 
             
-def showroom(room_name):
-    room = rooms[room_name]
-    print(room["description"])
-    print(f"You are in: {room_name}")
+def showroom():
+    print(rooms.information)
+    print(f"You are in: {rooms.name}")
 #The lesson here: enumerate() always hands you (number, item) in that fixed order
-def moving_character(room_name):      
-    room = rooms[room_name]
-    for i, (direction, rom) in enumerate(room["exits"].items()):
+def moving_character():
+    for i, (direction, rom) in enumerate(rooms.exits.items()):
         if rom in character.visited_room:
                 print(f"{i}, {direction} --->{rom}")
         else:
                 print(f"{i}, {direction} ---> ???")
     n = input_int("choose where to head to: ")
-    for i, (direction,phong)  in enumerate((room["exits"]).items()):
+    for i, (direction,phong)  in enumerate(rooms.exits.items()):
         if n == i:
             character.current_position = phong
             character.visited_room.add(character.current_position)
@@ -227,8 +494,8 @@ def moving_character(room_name):
         print("path don't exits")
         return
 
-def notenoughgold(itemgold):
-    if character.gold < itemgold:
+def notenoughgold(character, items):
+    if character.gold < items.price:
         print("you don't have enough gold")
         return True
     else:
@@ -237,7 +504,7 @@ def notenoughgold(itemgold):
 def shop():
     if character.current_position == "Mysterious-shop":
         while True:
-            for i,item in enumerate(rooms["Mysterious-shop"]["items"], start = 1):
+            for i,item in enumerate(rooms.Mysterious_shop["items"], start = 1):
                 print(f"{i}. {item["name"]}|{item["gold"]}gold")
             print("0.cancel")    
             playerchoice = input_int("press to buy: ")
@@ -422,11 +689,11 @@ def attack(attacker, target):
         choose = input_int("press 1 to 5 to attack: ")
         
         if choose == fate:
-            target.takedamage(attacker.dmg * 2)
+            target.takedamage(attacker.damage * 2)
         elif choose == fate + 1 or choose == fate - 1:
-            target.takedamage(attacker.dmg *1.5)
+            target.takedamage(attacker.damage *1.5)
         elif choose == fate + 2 or choose == fate - 2:
-            target.takedamage(attacker.dmg * 1)
+            target.takedamage(attacker.damage * 1)
         else:
             print("you missed")
         
@@ -445,120 +712,16 @@ def monsterloot(monster):
         coins = random.randint(1,10)
         print(f"you recieve {coins} coins")
         character.gold +=coins
-        
-
-
-def showinventory(target):
-    if not target.items:
-        print("no items")
-        return
-    else:
-        for i,item in enumerate(target["items"]):
-            print(f"{i}, {item["name"]}:{item["damage"]}dmg")  
-
-
-def chooseitem(message, target):
-    if not target["items"]:
-        return None
-    else:
-        while True:
-            try:
-                showinventory(target)
-                choice = input_int(message)
-                return target["items"][choice]
-            except IndexError:
-                print("invalid number")
-
-def takeitems():
-    if not rooms[character.current_position]["items"]:
-        print("no items found")
-        return None
-    else: 
-        item = chooseitem("choose an item to take: ", rooms[character.current_position])
-        character["items"].append(item)
-        rooms[character.current_position]["items"].remove(item)
-
-def dropitems():
-    if not character.items:
-        print("no items to drop")
-        return None
-    else: 
-        item = chooseitem("choose an item to drop: ", character)
-        print(f"you have dropped {item}")
-        rooms[character.current_position]["items"].append(item)
-        character.items.remove(item)
-
-def choosetarget(monster, character):
-    print("1.monster\n2.player")
-    playerchoice = input_int("please choose a number: ")
-    if playerchoice == 1:
-        return monster
-    elif playerchoice == 2:
-        return character           
-    
-def equip_item(item, slot_name, stat_name):
-    """
-    slot_name: "weapon" hoặc "defweapon"
-    stat_name: "damage" hoặc "defense"
-    """
-    if len(character.slot_name) == 1:
-        playerchoice = input_int("1.change item\n2.cancel")
-        if playerchoice == 1:
-            old_item = character[slot_name][0]
-            character[slot_name].remove(old_item)
-            character.items.append(old_item)
-            character[stat_name] -= old_item[stat_name]
-            
-            character[slot_name].append(item)
-            character[stat_name] += item[stat_name]
-            character.items.remove(item)
-        else:
-            return
-    else:
-        character[slot_name].append(item)
-        character[stat_name] += item[stat_name]
-        character.items.remove(item)
-        
-    
-    
-def useitem(monster):
-    item = chooseitem("choose item: ", character)
-    if item is None:
-        print("no item use")
-        return
-    if monster is None:
-        target = character
-    else:
-        target = choosetarget(monster, character)
-    if item["name"] == "strength-potion":
-            character["damage"] += item["damage"]
-            character["items"].remove(item)
-    elif item["name"] == "magical-book":
-            target  ["hp"] -= item["damage"]
-            character["items"].remove(item) 
-    elif item["type"] == "potion" or item["type"] == "food":
-        target["hp"] += item["damage"]
-        character["items"].remove(item)
-    
-    elif item["type"] == "sword":
-        equip_item(item, "weapon", "damage")
-    
-    elif item["type"] == "armor":
-        equip_item(item, "defweapon", "defense")
-            
-    elif item["type"] == "lore":
-        print("i am so lazy if you have treasure and defeat\nboss you will win btw there is a key in vault room so good luck")
-
 def monstercounterattack(monster):
     monsterfate = random.randint(1, 5)
     monsterchoose = random.randint(1, 5)
             
     if monsterchoose == monsterfate:
-                dmg = defensemechanic(character, monster["damage"]*1.5)
+                damage = defensemechanic(character, monster["damage"]*1.5)
     else:
-                dmg = defensemechanic(character, monster["damage"])
-    character["hp"] -= dmg
-    print(f"{monster['name']} deal {dmg}")
+                damage = defensemechanic(character, monster["damage"])
+    character["hp"] -= damage
+    print(f"{monster['name']} deal {damage}")
             
     if character.isdead():
         return
