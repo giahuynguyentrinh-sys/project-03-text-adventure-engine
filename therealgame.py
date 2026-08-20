@@ -15,11 +15,6 @@ character = {
 }
 
 
-class game:
-    def __init__(self, character, roomlist, items):
-        self.character = character
-        self.rooms = roomlist
-        self.items = items
 class items:
     def __init__(self, name, damage, type, category, price=0):
         self.name = name
@@ -32,7 +27,7 @@ class items:
         if self.category == "weapon":
             weapon.equipweapon(self, character, character.defweapon, character.weapon)
         elif self.category == "potion":
-            target = character.choosetarget(character, monster)
+            target = character.choosetarget(monster)
             if target is None:
                 print("invalid target, item not used")
                 return
@@ -48,6 +43,7 @@ class weapon(items):
         slot_weapon.remove(old_item)
         old_item.updatestat(character, add = False)
         slot_weapon.append(self)
+        character.items.remove(self)
         self.updatestat(character, add = True)
     def updatestat(self, character,add = True):
             if self.type == "sword":
@@ -232,12 +228,23 @@ class CHARACTER:
         self.current_position = current_position
         self.visited_room = visited_room if visited_room is not None else {"Homeroom"}
     @staticmethod
-    def spawnmonster(name,hp,damage):
-        return CHARACTER(name=name,hp=hp, damage = damage, type = "monster",gold = random.randint(1,10))
-    def takedamage(self, damage):
+    def spawnmonster(name,hp,damage,type ="monster"):
+        return CHARACTER(name=name,hp=hp, damage = damage, type = type,gold = random.randint(1,10))
+    
+    def dealdamage(self, damage, attacker):
         actual_damage = max(0, damage - self.defense)
         self.hp -= actual_damage
+        print(f"{attacker.name} deal {actual_damage}")
         return actual_damage
+    def statincombat(self, monster):
+        print("╔══════════════════════════════════════╗")
+        print("║              COMBAT STATUS           ║")
+        print("╠════════════════════╦═════════════════╣")
+        print("║      CHARACTER     ║     MONSTER     ║")
+        print("╠════════════════════╬═════════════════╣")
+        print(f"║ HP: {self.hp:<14} ║ HP: {monster.hp:<12} ║")
+        print(f"║ DMG: {self.damage:<13} ║ DMG: {monster.damage:<11} ║")
+        print("╚════════════════════╩═════════════════╝")
     def isdead(self):
         return self.hp <=0
     #item
@@ -259,8 +266,8 @@ class CHARACTER:
 #you
 character = CHARACTER(
 name = "hero",
-hp = character["hp"],
-damage = character["damage"],
+hp = 10000000,
+damage = 1000000,
 defense = character["defense"],
 items = character["items"],
 gold = character["gold"],
@@ -278,8 +285,8 @@ fallen_knight = CHARACTER.spawnmonster("The fallen knight", 200, 10)
 supreme_thief = CHARACTER.spawnmonster("supreme-thief", 1, 0)
 faceless = CHARACTER.spawnmonster("Faceless", 50, 10)
 # specialmonster
-fire_of_truth = CHARACTER.spawnmonster("Fire of Truth", 1000, 1000)
-supreme_thief_trace = CHARACTER.spawnmonster("the trace of supreme-thief", 500, 100)
+fire_of_truth = CHARACTER.spawnmonster("Fire of Truth", 1000, 1000,type ="specialmonster")
+supreme_thief_trace = CHARACTER.spawnmonster("the trace of supreme-thief", 500, 100, type= "specialmonster")
 
 Execution_room.monsters.extend([executioner, weak_zombie])
 Quiet_room.monsters.extend([strong_zombie, orc])
@@ -422,12 +429,11 @@ def moving_character():
         print("path don't exits")
         return
 
-def notenoughgold(character, items):
-    if character.gold < items.price:
-        print("you don't have enough gold")
+def enoughgold(character, items):
+    if character.gold > items.price:
         return True
     else:
-        return False 
+        return False
 
 def shop():
         current_room = roomlist[character.current_position]
@@ -435,15 +441,14 @@ def shop():
             for i,item in enumerate(current_room.items, start = 1):
                 print(f"{i}. {item.name}|{item.price}gold")
             print("0.cancel")    
-            playerchoice = input_int("press to buy: ")
+            playerchoice = input_int("press to buy: ") 
             if playerchoice == 0:
                 return
-            if notenoughgold(current_room[playerchoice -1].price):
-                continue
-            else:   
-                    character.gold -= current_room.items[playerchoice -1].price
-                    print(f"you buy {current_room.items[playerchoice -1]}")
-                    character.items.append(current_room.items[playerchoice -1])
+            if enoughgold(character, current_room.items[playerchoice -1]):   
+                character.gold -= current_room.items[playerchoice -1].price
+                print(f"you buy {current_room.items[playerchoice -1]}")
+                character.items.append(current_room.items[playerchoice -1])
+                   
             
 def trap_room():
         while True:
@@ -454,7 +459,7 @@ def trap_room():
                 time.sleep(0.5)
                 if dice == 3:
                     print("you exit with boss key")
-                    character.items.append(roomlist.Trap_room.items[0])
+                    character.items.append(roomlist[character.current_position].items[0])
                     return
                 else:
                     character.hp -= 50
@@ -480,21 +485,20 @@ def deadend():
     character.current_position = "Homeroom"
 
 def boss_room():
-    if character.current_position == "Boss_room":
-        for item in character.items:
-            if item.name == "true-key":
+    for item in character.items:
+            if item.name == "true_key":
                 print("you enter boss-room")
                 print("you met supreme-theif")
-                showroom("Boss_room")
+                showroom()
                 fight()
                 return
-        else:
-            print("you don't have the key")
-            return
+    else:
+        print("you don't have the key")
+        return
 
 def playerwon():
     for item in character.items:
-        if item.name == "boss-loot":
+        if item.name == "boss_loot":
             return True
 
 
@@ -558,9 +562,9 @@ def fireoftruth():
             return
     else:
         print("bravo you kill a strong entity")
-        for i,n in enumerate(roomlist.Bersek_room):
+        for i,n in enumerate(roomlist["Bersek-room"].monsters):
             if n.name == "Fire of Truth":
-                roomlist.Bersek_room.pop(i)
+                roomlist["Bersek-room"].pop(i)
                 break
 def supthief():
         thief = roomlist.Boss_room.monsters[0]
@@ -568,9 +572,9 @@ def supthief():
             print("the thief stole 10hp from you")
             thief.hp += 10
             character.hp -= 10
+            character.statincombat(thief)
             print("the thief roll a dice")
             time.sleep(1)   # dừng 1 giây trước khi in tiếp
-        
             thiefdice = random.randint(1,6)
             playerdice = random.randint(1,6)
             print(f"Thief rolled: {thiefdice}")
@@ -580,8 +584,9 @@ def supthief():
                 character.hp -= thief.damage / thiefdice
             else:
                 thief.hp -= character.damage * playerdice
+            character.statincombat(thief)
         if thief.hp <= 0:
-            del roomlist.Boss_room.monsters[0]
+            del roomlist["Boss_room"].monsters[0]
         elif character.isdead():
             return
 
@@ -592,30 +597,28 @@ def check_special_monster(monster):
 
 def handle_special_monster(monster):
         if monster.name == "Fire of Truth":
-            fireoftruth(monster)
+            fireoftruth()
         elif monster.name == "the trace of supreme-thief":
             supthief()
             
 def attack(character, monster):
-        print("let the fate decide your destiny.")
         fate = random.randint(1, 5)
         choose = input_int("press 1 to 5 to attack: ")
         
         if choose == fate:
-            monster.takedamage(character.damage * 2)
+            monster.dealdamage(character.damage * 2, character)
         elif choose == fate + 1 or choose == fate - 1:
-            monster.takedamage(character.damage *1.5)
+            monster.dealdamage(character.damage *1.5, character)
         elif choose == fate + 2 or choose == fate - 2:
-            monster.takedamage(character.damage * 1)
+            monster.dealdamage(character.damage * 1, character)
         else:
             print("you missed")
-        
+        character.statincombat(monster)
         if monster.isdead():
             monsterloot(monster)
             return
-        
         print(f"{monster.name} phase")
-        if character.isdead(character):
+        if character.isdead():
             return
 
 def choosemonster():
@@ -636,14 +639,11 @@ def monsterloot(monster):
 def monstercounterattack(monster):
     monsterfate = random.randint(1, 5)
     monsterchoose = random.randint(1, 5)
-            
     if monsterchoose == monsterfate:
-                damage = character.takedamage(character, monster.damage*1.5)
+                damage = character.dealdamage(monster.damage*1.5, monster)
     else:
-                damage = character.takedamage(character, monster.damage)
-    character.hp -= damage
-    print(f"{monster.name} deal {damage}")
-            
+                damage = character.dealdamage(monster.damage, monster)
+    character.hp -= damage       
     if character.isdead():
         return
       
@@ -653,10 +653,13 @@ def fight():
         print("no monster here you are safe now")
         return
     if len(room.monsters) == 0:
-        print("no monster here")
         return
     n = False
-    while n == False: 
+    while n == False:
+        if len(room.monsters) == 0:
+            return
+        if room.monsters is None:
+            return  
         choice = input_int("choose 0 to 3 (if lucky you could flee the attack): ")
         fate = random.randint(0,3)
         if fate == choice:
@@ -670,21 +673,21 @@ def fight():
                 break
         x = False
         target = room.monsters[yourchoice]
+        if check_special_monster(target):
+            handle_special_monster(target)
+            continue
         while x == False:
             action = input_int("1. attack\n2. use item\nchoose action: ") 
             if action == 1:
-                if check_special_monster(target):
-                    handle_special_monster(target)
+                attack(character, target)
+                if target.isdead():
+                    print(f"you slain {target.name}")
+                    monsterloot(target)
+                    room.monsters.remove(target)
+                    x = True
+                    break
                 else:
-                    attack(character, target)
-                    if target.isdead():
-                        print(f"you slain {target.name}")
-                        monsterloot(target)
-                        room.monsters.remove(target)
-                        x = True
-                        break
-                    else:
-                        monstercounterattack(target)
+                    monstercounterattack(target)
                     
             elif action == 2:
                 if check_special_monster(target):
@@ -694,22 +697,22 @@ def fight():
                         print("no item to use")
                         continue
                     showinventory(character)
-                    chosen_item = chooseitem(target)
+                    chosen_item = chooseitem(character)
                     chosen_item.usingitem(character, target)
-                    if  character.isdead(target):
+                    if  target.isdead():
                         print(f"you slain {target.name}")
                         monsterloot(target)
                         room.monsters.remove(target)
                         x = True
                         break
                     monstercounterattack(target)
-            if character.isdead(character):
+            if character.isdead():
                 print("you die")
                 return
             
             for m in room.monsters[:]:
-                if character.isdead(m):
-                    print(f"you slain {m['name']}")
+                if m.isdead():
+                    print(f"you slain {m.name}")
                     monsterloot(m)
                     room.monsters.remove(m)
                     x = True
@@ -726,7 +729,7 @@ while True:
         shop()
     elif character.current_position == "Trap-room":
         trap_room()
-    elif character == "Deadend":
+    elif character.current_position == "Deadend":
         deadend()
     elif character.current_position == "Boss_room":
         boss_room()
@@ -736,9 +739,14 @@ while True:
         reset_game()
         continue
     while True:
-        print(f"hp: {character.hp}")
-        print(f"damage: {character.damage}")
-        print(f"inventory: {showinventory(character)}")
+        print("╔══════════════════════════════════════╗")
+        print("║              CHARACTER               ║")
+        print("╠══════════════════════════════════════╣")
+        print(f"║ HP        : {character.hp:<25}║")
+        print(f"║ DAMAGE    : {character.damage:<22}║")
+        print(f"║ INVENTORY : {', '.join(item.name for item in character.items):<22}║")
+        print(f"║ ROOM      : {character.current_position:<22}║")
+        print("╚══════════════════════════════════════╝")
         print("""
                 [1] item menu 
                 [2] show visited places
@@ -758,7 +766,7 @@ while True:
         else:
             print("invalid choice")
         if character.isdead():
-            reset_game
+            reset_game()
 
         
     
