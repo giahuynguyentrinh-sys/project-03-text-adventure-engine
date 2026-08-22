@@ -2,6 +2,8 @@
 import random
 import time
 import copy
+import json
+
 character = {
     "hp": 100,
     "items": [],
@@ -125,7 +127,9 @@ class rooms:
     def addmonster(self, monster):
         self.monsters.append(monster)
     def removemonster(self,monster):
-        self.monsters.remove(monster) 
+        self.monsters.remove(monster)
+    def roomtodict(self):
+        self 
 
 #rooms self, name, information,exits =None, items = None, monsters = None
 Homeroom = rooms(
@@ -564,7 +568,7 @@ def fireoftruth():
         print("bravo you kill a strong entity")
         for i,n in enumerate(roomlist["Bersek-room"].monsters):
             if n.name == "Fire of Truth":
-                roomlist["Bersek-room"].pop(i)
+                roomlist["Bersek-room"].monsters.remove(n)
                 break
 def supthief():
         thief = roomlist.Boss_room.monsters[0]
@@ -625,7 +629,7 @@ def choosemonster():
     current_room = roomlist[character.current_position]
     for i, monster in enumerate(current_room.monsters):
         print(f"{i}, {monster.name}")
-    yourchoice = input_int("you decide to encounter: ")
+    yourchoice = input_int("you encounter: ")
     return yourchoice
         
 def monsterloot(monster):
@@ -649,76 +653,61 @@ def monstercounterattack(monster):
       
 def fight():
     room = roomlist[character.current_position]
-    if room.monsters is None:
+    if room.monsters is None or len(room.monsters) == 0:
         print("no monster here you are safe now")
         return
-    if len(room.monsters) == 0:
-        return
-    n = False
-    while n == False:
+
+    fighting_room = True
+    while fighting_room:
         if len(room.monsters) == 0:
             return
-        if room.monsters is None:
-            return  
+        
         choice = input_int("choose 0 to 3 (if lucky you could flee the attack): ")
-        fate = random.randint(0,3)
+        fate = random.randint(0, 3)
         if fate == choice:
             print("It doesn't seem to notice me... I'm safe for now.")
-            return  
+            return
+        
         print("It noticed me!")
         yourchoice = choosemonster()
-        for i, monster in enumerate(room.monsters):
-            if i == yourchoice:
-                print(f"you deal with {monster.name}")
-                break
-        x = False
         target = room.monsters[yourchoice]
+        print(f"you deal with {target.name}")
+
         if check_special_monster(target):
             handle_special_monster(target)
             continue
-        while x == False:
-            action = input_int("1. attack\n2. use item\nchoose action: ") 
+
+        fighting_target = False   # cờ riêng cho combat với target hiện tại, reset mỗi lần
+        while not fighting_target:
+            action = input_int("1. attack\n2. use item\nchoose action: ")
             if action == 1:
                 attack(character, target)
                 if target.isdead():
                     print(f"you slain {target.name}")
                     monsterloot(target)
                     room.monsters.remove(target)
-                    x = True
-                    break
-                else:
-                    monstercounterattack(target)
-                    
+                    fighting_target = True
+                    continue
+                monstercounterattack(target)
+
             elif action == 2:
-                if check_special_monster(target):
-                    handle_special_monster(target)
-                else:
-                    if not character.items:
-                        print("no item to use")
-                        continue
-                    showinventory(character)
-                    chosen_item = chooseitem(character)
-                    chosen_item.usingitem(character, target)
-                    if  target.isdead():
-                        print(f"you slain {target.name}")
-                        monsterloot(target)
-                        room.monsters.remove(target)
-                        x = True
-                        break
-                    monstercounterattack(target)
+                if not character.items:
+                    print("no item to use")
+                    continue
+                showinventory(character)
+                chosen_item = chooseitem(character)
+                chosen_item.usingitem(character, target)
+                if target.isdead():
+                    print(f"you slain {target.name}")
+                    monsterloot(target)
+                    room.monsters.remove(target)
+                    fighting_target = True
+                    continue
+                monstercounterattack(target)
+
             if character.isdead():
                 print("you die")
                 return
-            
-            for m in room.monsters[:]:
-                if m.isdead():
-                    print(f"you slain {m.name}")
-                    monsterloot(m)
-                    room.monsters.remove(m)
-                    x = True
-                    break
-            else:
-                continue
            
 while True:
     if playerwon():
